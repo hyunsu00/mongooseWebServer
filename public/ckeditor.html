@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HwpTextExtractor</title>
+    <script async src="HwpTextExtractor.js"></script>
+    <script>
+        var Module = {
+            onRuntimeInitialized: function () {
+                console.log('module loaded');
+                FS.mkdir('/samples');
+            }
+        };
+        function openMemoryFile(edt) {
+            let inputEl = document.createElement("input");
+            inputEl.type = "file";
+            inputEl.accept = ".hwp, .hwpx, .hml";
+            inputEl.onchange = function (e) {
+                let file = e.target.files[0];
+                let fr = new FileReader();
+                fr.readAsArrayBuffer(file);
+                fr.onload = () => {
+                    try {
+                        const filterType = Module.getFilterType(file.name);
+                        const text = Module.getFullTextFromBuffer(filterType, new Uint8Array(fr.result));
+                        CKEDITOR.instances.editor.document.$.body.innerText = '';
+                        edt.insertHtml(text);
+                    } catch (e) {
+                        console.log(e.message);
+                    }
+                }
+            };
+            inputEl.click();
+        }
+        function openFSFile(edt) {
+            let inputEl = document.createElement("input");
+            inputEl.type = "file";
+            inputEl.accept = ".hwp, .hwpx, .hml";
+            inputEl.onchange = function (e) {
+                let file = e.target.files[0];
+                let fr = new FileReader();
+                fr.readAsArrayBuffer(file);
+                fr.onload = () => {
+                    try {
+                        Module.FS.writeFile(file.name, new Uint8Array(fr.result));
+                        const text = Module.getFullTextFromFilePath(file.name);
+                        CKEDITOR.instances.editor.document.$.body.innerText = '';
+                        edt.insertHtml(text);
+                    } catch (e) {
+                        console.log(e.message);
+                    }
+                }
+            };
+            inputEl.click();
+        }
+        function openUrlFile(edt) {
+            try {
+                fetch("./samples/한글문서.hwp")
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error, status = ${response.status}`);
+                        }
+                        return response.arrayBuffer();
+                    })
+                    .then((arrayBuffer) => {
+                        try {
+                            Module.FS.writeFile("./samples/한글문서.hwp", new Uint8Array(arrayBuffer));
+                            const text = Module.getFullTextFromFilePath("./samples/한글문서.hwp");
+                            CKEDITOR.instances.editor.document.$.body.innerText = '';
+                            edt.insertHtml(text);
+                        } catch (e) {
+                            console.log(e.message);
+                        }
+                    });
+            } catch (edt) {
+                console.log(edt.message);
+            }
+        }
+    </script>
+    <div id="editor"></div>
+    <script src="/ckeditor4/ckeditor.js"></script>    
+    <script>
+        let editor = CKEDITOR.replace("editor", {
+            height: 400,
+        });
+        editor.config.allowedContent = true;
+
+        // icon 패스는 절대 경로로 만든다.
+        const pathname = window.location.pathname;
+        const basePath = pathname.substring(0, pathname.lastIndexOf('/'));
+        editor.ui.addButton('openUrlFile_button', {
+            label: '한글문서(URL) 열기...',
+            command: 'openUrlFile_command',
+            toolbar: "others",
+            icon: basePath + '/images/toolbarButton-openFile.svg'
+        });
+
+        editor.addCommand('openUrlFile_command', {
+            exec: function (edt) {
+                openUrlFile(edt);
+            }
+        });
+   
+        editor.ui.addButton('openMemoryFile_button', {
+            label: '한글문서(메모리) 열기...',
+            command: 'openMemoryFile_command',
+            toolbar: "others",
+            icon: basePath + '/images/toolbarButton-openFile.svg'
+        });
+
+        editor.addCommand('openMemoryFile_command', {
+            exec: function (edt) {
+                openMemoryFile(edt);
+            }
+        });
+
+        editor.ui.addButton('openFSFile_button', {
+            label: '한글문서(FS) 열기...',
+            command: 'openFsFile_command',
+            toolbar: "others",
+            icon: basePath + '/images/toolbarButton-openFile.svg'
+        });
+
+        editor.addCommand('openFsFile_command', {
+            exec: function (edt) {
+                openFSFile(edt);
+            }
+        });
+
+
+    </script>
+</head>
+
+<body>
+    <div>
+        <!-- <button onclick="openMemoryFile(event)">한글문서(메모리) 열기...</button>
+        <button onclick="openFSFile(event)">한글문서(FS) 열기...</button>
+        <button onclick="openUrlFile(event)">fetch('./samples/한글문서.hwp') 열기</button>
+        <br />
+        <textarea id="printText" rows="20" cols="74"></textarea> -->
+    </div>
+</body>
+
+</html>
